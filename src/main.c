@@ -12,11 +12,16 @@
 
 #define ARRAY_LEN(xs) sizeof(xs)/sizeof(xs[0])
 
+typedef struct{
+    float left;
+    float right;
+}Frame;
+
 const int screenWidth = 800;
 const int screenHeight = 600;
 
-#define FRAMES_CAPACITY 4080
-int32_t global_frames[FRAMES_CAPACITY] = {0};
+#define FRAMES_CAPACITY 4800
+Frame global_frames[FRAMES_CAPACITY*2] = {0};
 size_t global_frame_count = 0;
 
 // size_t capacity = 0;
@@ -27,12 +32,20 @@ void callback(void *bufferData, unsigned int frames)
     // size_t s = sizeof((int32_t*)bufferData)/sizeof(int32_t);
     // printf( "%zu\n",s);
 
-    if(frames > ARRAY_LEN(global_frames)){
-        frames = ARRAY_LEN(global_frames);
+    size_t capacity = ARRAY_LEN(global_frames);
+
+    if(frames <= capacity -  global_frame_count ){
+        memcpy(global_frames + global_frame_count,bufferData,frames*sizeof(Frame));
+        global_frame_count += frames;
+    }else if(frames <= capacity){
+        // element , bit size
+        memmove(global_frames,global_frames + frames,sizeof(Frame)*(capacity - frames));
+        memcpy(global_frames + (capacity-frames),bufferData,sizeof(Frame)*frames);
+    }else{
+        memcpy(global_frames,bufferData,sizeof(Frame)*capacity);
+        global_frame_count = capacity;
     }
-    memcpy(global_frames,bufferData,frames*sizeof(uint32_t));
-    // 2 channel 16bit 32bit
-    global_frame_count = frames;
+
 
     // (void)bufferData;
     // int16_t* frame = bufferData;    
@@ -88,15 +101,12 @@ int main(void)
 
         for (size_t i = 0; i < global_frame_count; i++)
         {
-            int16_t sample = *(int16_t*)&global_frames[i];
+            float t = global_frames[i].left;
             
-            if(sample > 0){
-                float t = (float)sample/INT16_MAX;
-                DrawRectangle(i*cell_width,h/2 - h/2*t,cell_width,h/2*t,RED);
+            if(t > 0){
+                DrawRectangle(i*cell_width,h/2 - h/2*t,1,h/2*t,RED);
             }else{
-                float t = (float)sample/INT16_MIN;
-                
-                DrawRectangle(i*cell_width,h/2,cell_width,h/2*t,RED);
+                DrawRectangle(i*cell_width,h/2,1,h/2*t,RED);
             }
             // printf("%d ",sample);
         }
